@@ -1,4 +1,6 @@
-gspread
-google-auth
+fastapi
+uvicorn
+pydantic
+python-dotenv
 openai
-flask
+requests
