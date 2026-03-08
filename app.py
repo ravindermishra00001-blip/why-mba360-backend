@@ -6,9 +6,11 @@ from twilio.rest import Client
 app = FastAPI(title="WHY MBA 360 API")
 
 # Twilio
-TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "test")
-TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "test")
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_WHATSAPP_NUMBER = os.getenv("TWILIO_WHATSAPP_NUMBER", "+14155238886")
+
+twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) if TWILIO_ACCOUNT_SID else None
 
 # CORS
 app.add_middleware(
@@ -21,11 +23,25 @@ app.add_middleware(
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "message": "Cerebro backend running"}
 
 @app.post("/api/whatsapp/send")
 async def send_whatsapp(phone: str, message: str):
-    return {"success": True, "phone": phone, "message": message}
+    try:
+        if not twilio_client:
+            return {"success": False, "error": "Twilio not configured"}
+        
+        if not phone.startswith("+"):
+            phone = "+91" + phone if len(phone) == 10 else "+" + phone
+        
+        msg = twilio_client.messages.create(
+            from_=f"whatsapp:{TWILIO_WHATSAPP_NUMBER}",
+            to=f"whatsapp:{phone}",
+            body=message
+        )
+        return {"success": True, "phone": phone, "twilio_sid": msg.sid}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
